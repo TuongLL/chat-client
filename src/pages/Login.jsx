@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef} from "react";
 import axios from "axios";
 import styled from "styled-components";
 import { useNavigate, Link } from "react-router-dom";
 import Logo from "../assets/logo.png";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { loginRoute } from "../utils/APIRoutes";
-
+import { loginRoute, updateStatus, host } from "../utils/APIRoutes";
+import { io } from "socket.io-client";
 export default function Login() {
   const navigate = useNavigate();
+  const socket = useRef();
   const [values, setValues] = useState({ username: "", password: "" });
   const toastOptions = {
     position: "bottom-right",
@@ -17,6 +18,9 @@ export default function Login() {
     draggable: true,
     theme: "dark",
   };
+  useEffect(() => {
+    socket.current = io(host)
+  }, [])
   useEffect(() => {
     if (localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)) {
       navigate("/");
@@ -51,6 +55,11 @@ export default function Login() {
         toast.error(data.msg, toastOptions);
       }
       if (data.status === true) {
+        await axios.post(updateStatus, {
+          id: data.user._id,
+          status: "online",
+        });
+        socket.current.emit("update-status", {});
         localStorage.setItem(
           process.env.REACT_APP_LOCALHOST_KEY,
           JSON.stringify(data.user)

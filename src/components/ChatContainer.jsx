@@ -4,12 +4,14 @@ import ChatInput from "./ChatInput";
 import Logout from "./Logout";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
-import { sendMessageRoute, recieveMessageRoute } from "../utils/APIRoutes";
+import { sendMessageRoute, recieveMessageRoute, searchUser } from "../utils/APIRoutes";
 
-export default function ChatContainer({ currentChat, socket }) {
+export default function ChatContainer({ currentChat, socket, changeChat }) {
+  console.log(currentChat)
   const [messages, setMessages] = useState([]);
   const scrollRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
+  // const [typeMsg, setTypeMsg] = useState("text")
   useEffect(async () => {
     const data = await JSON.parse(
       localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
@@ -22,6 +24,12 @@ export default function ChatContainer({ currentChat, socket }) {
   }, [currentChat]);
 
   useEffect(() => {
+    socket.current.on("set-status", async () => {
+      const data = await axios.post(`${searchUser}`, {
+        username: currentChat.username,
+      });
+      changeChat(data.data[0])
+    });
     const getCurrentChat = async () => {
       if (currentChat) {
         await JSON.parse(
@@ -32,7 +40,8 @@ export default function ChatContainer({ currentChat, socket }) {
     getCurrentChat();
   }, [currentChat]);
 
-  const handleSendMsg = async (msg) => {
+  const handleSendMsg = async (msg, type) => {
+    // setTypeMsg(type)
     const data = await JSON.parse(
       localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
     );
@@ -40,22 +49,24 @@ export default function ChatContainer({ currentChat, socket }) {
       to: currentChat._id,
       from: data._id,
       msg,
+      typeMsg: type
     });
     await axios.post(sendMessageRoute, {
       from: data._id,
       to: currentChat._id,
       message: msg,
+      type
     });
 
     const msgs = [...messages];
-    msgs.push({ fromSelf: true, message: msg });
+    msgs.push({ fromSelf: true, message: msg, typeMsg: type});
     setMessages(msgs);
   };
 
   useEffect(() => {
     if (socket.current) {
       socket.current.on("msg-recieve", (msg) => {
-        setArrivalMessage({ fromSelf: false, message: msg });
+        setArrivalMessage({ fromSelf: false, message: msg.msg, typeMsg: msg.typeMsg });
       });
     }
   }, []);
@@ -85,7 +96,6 @@ export default function ChatContainer({ currentChat, socket }) {
             </div>
           </div>
         </div>
-        <Logout />
       </div>
       <div className="chat-messages">
         {messages.map((message) => {
@@ -97,7 +107,13 @@ export default function ChatContainer({ currentChat, socket }) {
                 }`}
               >
                 <div className="content ">
-                  <p>{message.message}</p>
+                  {message.typeMsg == "text" ? (
+                    <p>{message.message}</p>
+                  ) : (
+                    <div className="chat-img">
+                      <img src={message.message} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -160,6 +176,15 @@ const Container = styled.div`
     flex-direction: column;
     gap: 1rem;
     overflow: auto;
+    .chat-img {
+      width: 100px;
+      heigth: 100px;
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+    }
     &::-webkit-scrollbar {
       width: 0.2rem;
       &-thumb {

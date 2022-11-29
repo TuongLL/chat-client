@@ -1,17 +1,27 @@
-import React from "react";
+import React, {useRef, useEffect} from "react";
 import { useNavigate } from "react-router-dom";
 import { BiPowerOff } from "react-icons/bi";
 import styled from "styled-components";
+import { io } from "socket.io-client";
 import axios from "axios";
-import { logoutRoute } from "../utils/APIRoutes";
+import { logoutRoute, updateStatus, host } from "../utils/APIRoutes";
 export default function Logout() {
   const navigate = useNavigate();
+  const socket = useRef;
+  useEffect(() => {
+    socket.cureent = io(host);
+  }, [])
   const handleClick = async () => {
     const id = await JSON.parse(
       localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
     )._id;
     const data = await axios.get(`${logoutRoute}/${id}`);
     if (data.status === 200) {
+      await axios.post(updateStatus, {
+        id,
+        status: "offline",
+      });
+      socket.cureent.emit("update-status", {});
       localStorage.clear();
       navigate("/login");
     }

@@ -3,10 +3,16 @@ import { BsEmojiSmileFill } from "react-icons/bs";
 import { IoMdSend } from "react-icons/io";
 import styled from "styled-components";
 import Picker from "emoji-picker-react";
+import { BiFile } from "react-icons/bi";
+import { storage } from "../base";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function ChatInput({ handleSendMsg }) {
   const [msg, setMsg] = useState("");
+  const [typeMsg, setTypeMsg] = useState("text")
+  const [urlMsg, setUrlMsg] = useState("")
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
   const handleEmojiPickerhideShow = () => {
     setShowEmojiPicker(!showEmojiPicker);
   };
@@ -20,9 +26,28 @@ export default function ChatInput({ handleSendMsg }) {
   const sendChat = (event) => {
     event.preventDefault();
     if (msg.length > 0) {
-      handleSendMsg(msg);
+      if (typeMsg == "file") {
+        handleSendMsg(urlMsg, typeMsg);
+      }
+      else handleSendMsg(msg, typeMsg);
       setMsg("");
     }
+  };
+  const sendFile = (e) => {
+    console.log("send file....");
+    const file = e.target.files[0];
+    const storageRef = ref(storage, file.name);
+    setMsg(file.name);
+    setTypeMsg("file");
+    uploadBytes(storageRef, file).then((snapshot) => {
+      console.log("Uploaded a blob or file!", snapshot.metadata.fullPath);
+    }).then( () => {
+      getDownloadURL(storageRef).then((url) => {
+        console.log(url);
+        setUrlMsg(url);
+      }).catch(err => console.log(err));
+    });
+    
   };
 
   return (
@@ -32,12 +57,23 @@ export default function ChatInput({ handleSendMsg }) {
           <BsEmojiSmileFill onClick={handleEmojiPickerhideShow} />
           {showEmojiPicker && <Picker onEmojiClick={handleEmojiClick} />}
         </div>
+        <div className="file">
+          <div class="image-upload">
+            <label for="file-input">
+              <BiFile size={30} cursor="pointer" />
+            </label>
+            <input id="file-input" type="file" onChange={sendFile} />
+          </div>
+        </div>
       </div>
       <form className="input-container" onSubmit={(event) => sendChat(event)}>
         <input
           type="text"
           placeholder="type your message here"
-          onChange={(e) => setMsg(e.target.value)}
+          onChange={(e) => {
+             setMsg(e.target.value);
+             setTypeMsg('text');
+          }}
           value={msg}
         />
         <button type="submit">
@@ -51,12 +87,15 @@ export default function ChatInput({ handleSendMsg }) {
 const Container = styled.div`
   display: grid;
   align-items: center;
-  grid-template-columns: 5% 95%;
+  grid-template-columns: 10% 90%;
   background-color: #080420;
   padding: 0 2rem;
   @media screen and (min-width: 720px) and (max-width: 1080px) {
     padding: 0 1rem;
     gap: 1rem;
+  }
+  .image-upload > input {
+    display: none;
   }
   .button-container {
     display: flex;

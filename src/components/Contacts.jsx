@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import Logo from "../assets/logo.png";
 import debounce from "lodash/debounce";
 import axios from "axios";
-import { searchUser } from "../utils/APIRoutes";
+import { io } from "socket.io-client";
+import { searchUser, host, allUsersRoute } from "../utils/APIRoutes";
+import Logout from "./Logout";
 export default function Contacts({
   contacts,
   changeChat,
@@ -13,21 +15,28 @@ export default function Contacts({
   const [currentUserName, setCurrentUserName] = useState(undefined);
   const [currentUserImage, setCurrentUserImage] = useState(undefined);
   const [currentSelected, setCurrentSelected] = useState(undefined);
+  const socket = useRef();
   useEffect(async () => {
+    socket.current = io(host);
     const data = await JSON.parse(
       localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
     );
-    setCurrentUserName(data.username);
+    setCurrentUserName(data.username ?? "");
     setCurrentUserImage(data.avatarImage);
   }, []);
-  const changeCurrentChat = (index, contact) => {
+  useEffect(() => {
+    console.log("here!");
+    socket.current.on("set-status", async () => {
+      const data = await axios.get(`${allUsersRoute}/${currentUserId}`);
+      setContacts(data.data);
+    });
+  }, [contacts]);
+  const changeCurrentChat = async (index, contact) => {
     setCurrentSelected(index);
-    setInterval(async () => {
-      const data = await axios.post(`${searchUser}`, {
-        username: contact.username
-      });
-      changeChat(data.data[0]);
-    }, 2000);
+    const data = await axios.post(`${searchUser}`, {
+      username: contact.username,
+    });
+    changeChat(data.data[0]);
   };
   const searchContact = async (e) => {
     const username = e.target.value;
@@ -35,6 +44,7 @@ export default function Contacts({
       username,
       id: currentUserId,
     });
+    console.log("search..", data);
     setContacts(data.data);
   };
   return (
@@ -70,6 +80,7 @@ export default function Contacts({
                   </div>
                   <div className="username">
                     <h3>{contact.username}</h3>
+                    <div className={`${contact.status}`}>{contact.status}</div>
                   </div>
                 </div>
               );
@@ -81,9 +92,12 @@ export default function Contacts({
                 src={`data:image/svg+xml;base64,${currentUserImage}`}
                 alt="avatar"
               />
+              <div className="username">
+                <h2>{currentUserName}</h2>
+              </div>
             </div>
-            <div className="username">
-              <h2>{currentUserName}</h2>
+            <div className="logout-btn">
+              <Logout />
             </div>
           </div>
         </Container>
@@ -156,29 +170,38 @@ const Container = styled.div`
         h3 {
           color: white;
         }
+        .offline {
+          color: #cc3300;
+        }
+        .online {
+          color: #00b200;
+        }
       }
     }
     .selected {
-      background-color: #9a86f3;
+      background-color: #5e3719;
     }
   }
 
   .current-user {
     background-color: #0d0d30;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    gap: 1rem;
+    padding:10px 20px;    
     .avatar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       img {
         height: 2.5rem;
         max-inline-size: 100%;
-      }
+    }
     }
     .username {
       h2 {
         color: white;
-        font-size: 1.2rem;
+        font-size: 2rem;
       }
     }
     @media screen and (min-width: 720px) and (max-width: 1080px) {
