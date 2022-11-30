@@ -59,7 +59,7 @@ export default function Login() {
           id: data.user._id,
           status: "online",
         });
-        socket.current.emit("update-status", {});
+        socket.current.emit("update-status", data.user._id);
         localStorage.setItem(
           process.env.REACT_APP_LOCALHOST_KEY,
           JSON.stringify(data.user)

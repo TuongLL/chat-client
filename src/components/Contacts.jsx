@@ -14,6 +14,8 @@ export default function Contacts({
 }) {
   const [currentUserName, setCurrentUserName] = useState(undefined);
   const [currentUserImage, setCurrentUserImage] = useState(undefined);
+  const [currentUserIdLocalStorage, setCurrentUserIdLocalStorage] =
+    useState(undefined);
   const [currentSelected, setCurrentSelected] = useState(undefined);
   const socket = useRef();
   useEffect(async () => {
@@ -21,13 +23,16 @@ export default function Contacts({
     const data = await JSON.parse(
       localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
     );
-    setCurrentUserName(data.username ?? "");
+    setCurrentUserName(data?.username ?? "");
     setCurrentUserImage(data.avatarImage);
+    setCurrentUserIdLocalStorage(data._id);
   }, []);
   useEffect(() => {
-    console.log("here!");
-    socket.current.on("set-status", async () => {
-      const data = await axios.get(`${allUsersRoute}/${currentUserId}`);
+    socket.current.on("set-status", async (id) => {
+      console.log(555, currentUserIdLocalStorage, id);
+      const data = await axios.get(
+        `${allUsersRoute}/${currentUserIdLocalStorage}`
+      );
       setContacts(data.data);
     });
   }, [contacts]);

@@ -21,7 +21,7 @@ export default function Logout() {
         id,
         status: "offline",
       });
-      socket.cureent.emit("update-status", {});
+      socket.cureent.emit("update-status", id);
       localStorage.clear();
       navigate("/login");
     }

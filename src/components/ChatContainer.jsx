@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import ChatInput from "./ChatInput";
-import Logout from "./Logout";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
-import { sendMessageRoute, recieveMessageRoute, searchUser } from "../utils/APIRoutes";
-
+import {
+  sendMessageRoute,
+  recieveMessageRoute,
+  searchUser,
+} from "../utils/APIRoutes";
 export default function ChatContainer({ currentChat, socket, changeChat }) {
-  console.log(currentChat)
+  console.log(currentChat);
   const [messages, setMessages] = useState([]);
   const scrollRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
-  // const [typeMsg, setTypeMsg] = useState("text")
+  const [typeMsg, setTypeMsg] = useState("text")
   useEffect(async () => {
     const data = await JSON.parse(
       localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
@@ -28,7 +30,7 @@ export default function ChatContainer({ currentChat, socket, changeChat }) {
       const data = await axios.post(`${searchUser}`, {
         username: currentChat.username,
       });
-      changeChat(data.data[0])
+      changeChat(data.data[0]);
     });
     const getCurrentChat = async () => {
       if (currentChat) {
@@ -45,28 +47,33 @@ export default function ChatContainer({ currentChat, socket, changeChat }) {
     const data = await JSON.parse(
       localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
     );
+    console.log('asd')
     socket.current.emit("send-msg", {
       to: currentChat._id,
       from: data._id,
       msg,
-      typeMsg: type
+      typeMsg: type,
     });
     await axios.post(sendMessageRoute, {
       from: data._id,
       to: currentChat._id,
       message: msg,
-      type
+      type,
     });
 
     const msgs = [...messages];
-    msgs.push({ fromSelf: true, message: msg, typeMsg: type});
+    msgs.push({ fromSelf: true, message: msg, typeMsg: type });
     setMessages(msgs);
   };
 
   useEffect(() => {
     if (socket.current) {
       socket.current.on("msg-recieve", (msg) => {
-        setArrivalMessage({ fromSelf: false, message: msg.msg, typeMsg: msg.typeMsg });
+        setArrivalMessage({
+          fromSelf: false,
+          message: msg.msg,
+          typeMsg: msg.typeMsg,
+        });
       });
     }
   }, []);
@@ -111,7 +118,17 @@ export default function ChatContainer({ currentChat, socket, changeChat }) {
                     <p>{message.message}</p>
                   ) : (
                     <div className="chat-img">
-                      <img src={message.message} />
+                      <a
+                        href={
+                          message.message.mimeType.startsWith("image")
+                            ? message.message.webViewLink
+                            : message.message.webContentLink
+                        }
+                        target="_blank"
+                      >
+                        <img src={message.message.iconLink} />
+                        <p>{message.message.fileName}</p>
+                      </a>
                     </div>
                   )}
                 </div>
@@ -176,9 +193,13 @@ const Container = styled.div`
     flex-direction: column;
     gap: 1rem;
     overflow: auto;
+    a {
+      color: #d1d1d1;
+    }
     .chat-img {
       width: 100px;
       heigth: 100px;
+      cursor: pointer;
       img {
         width: 100%;
         height: 100%;
